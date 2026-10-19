@@ -1,52 +1,52 @@
-// app.js — punto de entrada: conecta tareas.js con el DOM. Sesión 8 (módulos).
-import { crearTarea, renderizarTarea, cargarTareas, guardarTareas } from "./tareas.js";
+// app.js — entry point: connects tasks.js to the DOM. Session 8 (modules).
+import { createTask, renderTask, loadTasks, saveTasks } from "./tasks.js";
 
-let tareas = [];
+let tasks = [];
 
-const listaEl = document.getElementById("lista-tareas");
-const formEl = document.getElementById("form-tarea");
-const inputTituloEl = document.getElementById("input-titulo");
-const inputPrioridadEl = document.getElementById("input-prioridad");
+const listEl = document.getElementById("task-list");
+const formEl = document.getElementById("task-form");
+const titleInputEl = document.getElementById("input-title");
+const priorityInputEl = document.getElementById("input-priority");
 
-const pintarTodo = () => {
-  listaEl.innerHTML = "";
-  tareas.forEach((tarea) =>
-    renderizarTarea(tarea, listaEl, {
-      onToggle: alternarCompletada,
-      onEliminar: eliminarTarea,
+const renderAll = () => {
+  listEl.innerHTML = "";
+  tasks.forEach((task) =>
+    renderTask(task, listEl, {
+      onToggle: toggleCompleted,
+      onDelete: deleteTask,
     })
   );
 };
 
-function alternarCompletada(id) {
-  tareas = tareas.map((t) => (t.id === id ? { ...t, completada: !t.completada } : t));
-  guardarTareas(tareas);
-  pintarTodo();
+function toggleCompleted(id) {
+  tasks = tasks.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t));
+  saveTasks(tasks);
+  renderAll();
 }
 
-function eliminarTarea(id) {
-  tareas = tareas.filter((t) => t.id !== id);
-  guardarTareas(tareas);
-  pintarTodo();
+function deleteTask(id) {
+  tasks = tasks.filter((t) => t.id !== id);
+  saveTasks(tasks);
+  renderAll();
 }
 
-formEl.addEventListener("submit", (evento) => {
-  evento.preventDefault();
-  const titulo = inputTituloEl.value.trim();
-  if (!titulo) return;
-  tareas.push(crearTarea(titulo, inputPrioridadEl.value));
-  guardarTareas(tareas);
-  pintarTodo();
+formEl.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const title = titleInputEl.value.trim();
+  if (!title) return;
+  tasks.push(createTask(title, priorityInputEl.value));
+  saveTasks(tasks);
+  renderAll();
   formEl.reset();
 });
 
-async function iniciar() {
-  tareas = await cargarTareas();
-  if (tareas.length === 0) {
-    tareas = [crearTarea("Aprender el Bloque 3: PWA", "alta")];
-    guardarTareas(tareas);
+async function init() {
+  tasks = await loadTasks();
+  if (tasks.length === 0) {
+    tasks = [createTask("Learn Block 3: PWA", "high")];
+    saveTasks(tasks);
   }
-  pintarTodo();
+  renderAll();
 }
 
-iniciar();
+init();

@@ -25,27 +25,27 @@ body {
 }
 
 h1 { font-size: 1.6em; margin: 0 0 .1em; }
-.subtitulo { color: #777; font-size: .85em; margin: 0 0 1.4em; }
+.subtitle { color: #777; font-size: .85em; margin: 0 0 1.4em; }
 
-.form-tarea {
+.task-form {
   display: flex;
   gap: .5em;
   margin-bottom: 1.4em;
   flex-wrap: wrap;
 }
-.form-tarea input[type="text"] {
+.task-form input[type="text"] {
   flex: 1 1 220px;
   padding: .6em .8em;
   border: 1px solid var(--line);
   border-radius: 8px;
   font-size: .95em;
 }
-.form-tarea select {
+.task-form select {
   padding: .6em .5em;
   border: 1px solid var(--line);
   border-radius: 8px;
 }
-.form-tarea button {
+.task-form button {
   background: var(--ink);
   color: var(--gold);
   border: none;
@@ -54,10 +54,10 @@ h1 { font-size: 1.6em; margin: 0 0 .1em; }
   font-weight: 700;
   cursor: pointer;
 }
-.form-tarea button:hover { background: #000; }
+.task-form button:hover { background: #000; }
 
-.lista-tareas { list-style: none; margin: 0; padding: 0; display: grid; gap: .5em; }
-.tarea {
+.task-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .5em; }
+.task {
   display: flex;
   align-items: center;
   gap: .7em;
@@ -66,12 +66,12 @@ h1 { font-size: 1.6em; margin: 0 0 .1em; }
   border-left: 4px solid #999;
   border-radius: 8px;
 }
-.tarea--baja { border-left-color: #6fa8dc; }
-.tarea--media { border-left-color: var(--gold-deep); }
-.tarea--alta { border-left-color: var(--danger); }
-.tarea span { flex: 1; }
-.tarea--completada span { text-decoration: line-through; color: #999; }
-.btn-eliminar {
+.task--low { border-left-color: #6fa8dc; }
+.task--medium { border-left-color: var(--gold-deep); }
+.task--high { border-left-color: var(--danger); }
+.task span { flex: 1; }
+.task--completed span { text-decoration: line-through; color: #999; }
+.btn-delete {
   background: none;
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -80,4 +80,4 @@ h1 { font-size: 1.6em; margin: 0 0 .1em; }
   cursor: pointer;
   color: var(--danger);
 }
-.btn-eliminar:hover { background: #fdecea; }
+.btn-delete:hover { background: #fdecea; }

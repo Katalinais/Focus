@@ -1,27 +1,28 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gestor de Tareas</title>
-<link rel="stylesheet" href="css/estilos.css">
+<title>Task Manager</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
   <main class="app">
-    <h1>Gestor de Tareas</h1>
-    <p class="subtitulo">Proyecto base — Electiva PWA, cierre de los Bloques 1 y 2.</p>
+    <h1>Task Manager</h1>
+    <p class="subtitle">Base project — PWA elective, wrap-up of Blocks 1 and 2.</p>
 
-    <form id="form-tarea" class="form-tarea">
-      <input type="text" id="input-titulo" placeholder="Nueva tarea..." required>
-      <select id="input-prioridad">
-        <option value="baja">Baja</option>
-        <option value="media" selected>Media</option>
-        <option value="alta">Alta</option>
+    <form id="task-form" class="task-form">
+      <input type="text" id="input-title" placeholder="New task..." required>
+      <select id="input-priority">
+        <option value="low">Low</option>
+        <option value="medium" selected>Medium</option>
+        <option value="high">High</option>
       </select>
-      <button type="submit">Agregar</button>
+      <button type="submit">Add</button>
     </form>
 
-    <ul id="lista-tareas" class="lista-tareas"></ul>
+    <ul id="task-list" class="task-list"></ul>
   </main>
 
   <script type="module" src="app.js"></script>
