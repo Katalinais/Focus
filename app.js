@@ -26,6 +26,8 @@ const priorityInputEl = document.getElementById("input-priority");
 const passphraseInputEl = document.getElementById("input-passphrase");
 const noteInputEl = document.getElementById("input-note");
 const noteErrorEl = document.getElementById("note-error");
+const connectionBannerEl = document.getElementById("connection-banner");
+const installBtnEl = document.getElementById("btn-install");
 
 const renderAll = () => {
   listEl.innerHTML = "";
@@ -129,7 +131,7 @@ async function init() {
     await addTask(db, seedTask);
     tasks = [seedTask];
   }
-  renderAll();
+  renderAll(); // replaces the loading skeleton markup with the real list
 }
 
 init();
@@ -141,3 +143,32 @@ if ("serviceWorker" in navigator) {
     .then((reg) => console.log("SW registered:", reg.scope))
     .catch((err) => console.error("Error registering SW:", err));
 }
+
+// Connection indicator — PWA-specific UX (Session 23): the user should know
+// whether they're seeing fresh data or a cached offline copy.
+function updateConnectionBanner() {
+  connectionBannerEl.hidden = navigator.onLine;
+}
+window.addEventListener("online", updateConnectionBanner);
+window.addEventListener("offline", updateConnectionBanner);
+updateConnectionBanner();
+
+// Custom install prompt — PWA-specific UX (Session 23). Chrome/Edge fire
+// beforeinstallprompt; Safari/iOS never does, so the button simply never
+// appears there and offline/manual install is the only option on iOS.
+let deferredInstallPrompt;
+window.addEventListener("beforeinstallprompt", (event) => {
+  event.preventDefault();
+  deferredInstallPrompt = event;
+  installBtnEl.hidden = false;
+});
+installBtnEl.addEventListener("click", async () => {
+  if (!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+  installBtnEl.hidden = true;
+});
+window.addEventListener("appinstalled", () => {
+  installBtnEl.hidden = true;
+});

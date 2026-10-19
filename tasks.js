@@ -34,6 +34,7 @@ export const renderTask = (task, container, { onToggle, onDelete, onRevealNote }
   const check = document.createElement("input");
   check.type = "checkbox";
   check.checked = task.completed;
+  check.setAttribute("aria-label", `Mark "${task.title}" as completed`);
   check.addEventListener("change", () => onToggle(task.id));
 
   const text = document.createElement("span");

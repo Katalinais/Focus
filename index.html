@@ -3,19 +3,26 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Manage your tasks offline, with private notes encrypted in the browser.">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1A1A1A">
 <title>Task Manager</title>
 <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
+  <p id="connection-banner" class="connection-banner" hidden>Offline — showing saved data.</p>
   <main class="app">
-    <h1>Task Manager</h1>
-    <p class="subtitle">Base project — PWA elective, wrap-up of Blocks 1 and 2.</p>
+    <div class="app-head">
+      <div>
+        <h1>Task Manager</h1>
+        <p class="subtitle">Base project — PWA elective, wrap-up of Blocks 1 and 2.</p>
+      </div>
+      <button id="btn-install" class="btn-install" hidden>Install app</button>
+    </div>
 
     <form id="task-form" class="task-form">
       <input type="text" id="input-title" placeholder="New task..." required>
-      <select id="input-priority">
+      <select id="input-priority" aria-label="Priority">
         <option value="low">Low</option>
         <option value="medium" selected>Medium</option>
         <option value="high">High</option>
@@ -30,7 +37,10 @@
     <p class="crypto-hint">The passphrase is never saved — only used, in memory, to derive the encryption key (Session 22). Use the same one to add and to reveal notes.</p>
     <p id="note-error" class="crypto-error"></p>
 
-    <ul id="task-list" class="task-list"></ul>
+    <ul id="task-list" class="task-list">
+      <li class="task-skeleton"></li>
+      <li class="task-skeleton"></li>
+    </ul>
   </main>
 
   <script type="module" src="app.js"></script>
