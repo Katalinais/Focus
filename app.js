@@ -20,6 +20,7 @@ import {
   obtainLocation,
   describeLocationError,
 } from "./device.js";
+import { requestSensorPermission, hasRealReadings, listenOrientation, detectShake } from "./sensors.js";
 
 const OLD_LOCALSTORAGE_KEY = "pwa-elective-tasks";
 
@@ -28,6 +29,7 @@ let tasks = [];
 let cachedKey = null;
 let cachedPassphrase = null;
 let photoUrls = []; // object URLs from the last render, revoked before the next one
+let lastDeleted = null; // Session 25: backing store for "undo delete"
 
 const listEl = document.getElementById("task-list");
 const formEl = document.getElementById("task-form");
@@ -43,6 +45,9 @@ const cameraDialogEl = document.getElementById("camera-dialog");
 const cameraVideoEl = document.getElementById("camera-video");
 const captureBtnEl = document.getElementById("btn-capture");
 const cancelCameraBtnEl = document.getElementById("btn-cancel-camera");
+const undoBtnEl = document.getElementById("btn-undo");
+const shakeBtnEl = document.getElementById("btn-shake");
+const sensorStatusEl = document.getElementById("sensor-status");
 
 const renderAll = () => {
   photoUrls.forEach((url) => URL.revokeObjectURL(url));
@@ -87,6 +92,8 @@ async function toggleCompleted(id) {
 }
 
 async function deleteTaskHandler(id) {
+  lastDeleted = tasks.find((t) => t.id === id) ?? null;
+  undoBtnEl.disabled = !lastDeleted;
   await deleteTask(db, id);
   tasks = tasks.filter((t) => t.id !== id);
   renderAll();
@@ -265,3 +272,59 @@ async function getLocationForTask(id) {
     deviceErrorEl.textContent = describeLocationError(err);
   }
 }
+
+// Undo delete + shake-to-undo (Session 25). Two paths to the same action:
+// a button that works on any device, and the shake as an additional
+// shortcut — sensors are a progressive enhancement, never the only way.
+async function undoDelete() {
+  if (!lastDeleted) return;
+  // Reinserted as a new record (fresh id) rather than reusing the old one —
+  // same approach the guide uses, and it sidesteps any lingering reference
+  // to an id IndexedDB no longer has.
+  const restored = { ...lastDeleted, id: crypto.randomUUID() };
+  await addTask(db, restored);
+  tasks.push(restored);
+  sensorStatusEl.textContent = `Restored "${restored.title}".`;
+  lastDeleted = null;
+  undoBtnEl.disabled = true;
+  renderAll();
+}
+undoBtnEl.addEventListener("click", undoDelete);
+
+let sensorsActive = false;
+let stopOrientation = null;
+let stopShake = null;
+
+shakeBtnEl.addEventListener("click", async () => {
+  if (sensorsActive) {
+    stopOrientation?.();
+    stopShake?.();
+    stopOrientation = null;
+    stopShake = null;
+    sensorsActive = false;
+    shakeBtnEl.textContent = "📳 Enable shake to undo";
+    shakeBtnEl.classList.remove("is-active");
+    sensorStatusEl.textContent = "";
+    return;
+  }
+
+  // Requested inside this click, as iOS's requestPermission() requires.
+  const permission = await requestSensorPermission();
+  if (permission === "denied") {
+    sensorStatusEl.textContent = "You denied the motion sensor permission. Use the Undo delete button instead.";
+    return;
+  }
+
+  if (!(await hasRealReadings())) {
+    sensorStatusEl.textContent = "This device has no motion sensors. Use the Undo delete button instead.";
+    return;
+  }
+
+  sensorsActive = true;
+  shakeBtnEl.textContent = "📳 Disable shake to undo";
+  shakeBtnEl.classList.add("is-active");
+  stopOrientation = listenOrientation(({ beta, gamma }) => {
+    sensorStatusEl.textContent = `Tilt β ${Math.round(beta)}° · γ ${Math.round(gamma)}°`;
+  });
+  stopShake = detectShake(() => undoDelete());
+});
