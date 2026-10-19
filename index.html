@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Task Manager</title>
 <link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1A1A1A">
+<title>Task Manager</title>
 <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -21,6 +22,13 @@
       </select>
       <button type="submit">Add</button>
     </form>
+
+    <div class="crypto-row">
+      <input type="password" id="input-passphrase" placeholder="Encryption passphrase">
+      <input type="text" id="input-note" placeholder="Private note (optional, encrypted)">
+    </div>
+    <p class="crypto-hint">The passphrase is never saved — only used, in memory, to derive the encryption key (Session 22). Use the same one to add and to reveal notes.</p>
+    <p id="note-error" class="crypto-error"></p>
 
     <ul id="task-list" class="task-list"></ul>
   </main>

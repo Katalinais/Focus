@@ -56,10 +56,27 @@ h1 { font-size: 1.6em; margin: 0 0 .1em; }
 }
 .task-form button:hover { background: #000; }
 
+.crypto-row {
+  display: flex;
+  gap: .5em;
+  margin-bottom: .4em;
+  flex-wrap: wrap;
+}
+.crypto-row input {
+  flex: 1 1 220px;
+  padding: .5em .7em;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: .9em;
+}
+.crypto-hint { color: #999; font-size: .76em; margin: 0 0 .6em; }
+.crypto-error { color: var(--danger); font-size: .8em; margin: 0 0 .8em; min-height: 1em; }
+
 .task-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .5em; }
 .task {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: .7em;
   padding: .7em .9em;
   border: 1px solid var(--line);
@@ -69,8 +86,8 @@ h1 { font-size: 1.6em; margin: 0 0 .1em; }
 .task--low { border-left-color: #6fa8dc; }
 .task--medium { border-left-color: var(--gold-deep); }
 .task--high { border-left-color: var(--danger); }
-.task span { flex: 1; }
-.task--completed span { text-decoration: line-through; color: #999; }
+.task span:not(.task-note) { flex: 1; }
+.task--completed span:not(.task-note) { text-decoration: line-through; color: #999; }
 .btn-delete {
   background: none;
   border: 1px solid var(--line);
@@ -81,3 +98,22 @@ h1 { font-size: 1.6em; margin: 0 0 .1em; }
   color: var(--danger);
 }
 .btn-delete:hover { background: #fdecea; }
+.btn-note {
+  background: none;
+  border: 1px solid var(--gold-deep);
+  color: var(--gold-deep);
+  border-radius: 6px;
+  padding: .3em .6em;
+  font-size: .78em;
+  cursor: pointer;
+}
+.btn-note:hover { background: #fff6dc; }
+.task-note {
+  flex-basis: 100%;
+  font-size: .82em;
+  color: #555;
+  background: #f7f5ee;
+  border-radius: 6px;
+  padding: .4em .6em;
+}
+.task-note--error { color: var(--danger); background: #fdecea; }

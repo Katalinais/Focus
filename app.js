@@ -1,52 +1,143 @@
-// app.js — entry point: connects tasks.js to the DOM. Session 8 (modules).
-import { createTask, renderTask, loadTasks, saveTasks } from "./tasks.js";
+// app.js — entry point: connects tasks.js, db.js and crypto.js to the DOM.
+// Session 8 (modules); storage and encryption wiring added in Session 22.
+import { createTask, renderTask } from "./tasks.js";
+import {
+  openDatabase,
+  addTask,
+  putTask,
+  deleteTask,
+  getAllTasks,
+  getMeta,
+  setMeta,
+} from "./db.js";
+import { deriveKeyFromPassword, encryptText, decryptText } from "./crypto.js";
 
+const OLD_LOCALSTORAGE_KEY = "pwa-elective-tasks";
+
+let db;
 let tasks = [];
+let cachedKey = null;
+let cachedPassphrase = null;
 
 const listEl = document.getElementById("task-list");
 const formEl = document.getElementById("task-form");
 const titleInputEl = document.getElementById("input-title");
 const priorityInputEl = document.getElementById("input-priority");
+const passphraseInputEl = document.getElementById("input-passphrase");
+const noteInputEl = document.getElementById("input-note");
+const noteErrorEl = document.getElementById("note-error");
 
 const renderAll = () => {
   listEl.innerHTML = "";
   tasks.forEach((task) =>
     renderTask(task, listEl, {
       onToggle: toggleCompleted,
-      onDelete: deleteTask,
+      onDelete: deleteTaskHandler,
+      onRevealNote: revealNote,
     })
   );
 };
 
-function toggleCompleted(id) {
-  tasks = tasks.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t));
-  saveTasks(tasks);
+// Derives (or reuses) the AES-GCM key for the passphrase currently typed in.
+// The passphrase itself is never saved anywhere — only the salt is, in
+// IndexedDB's "meta" store — so the same passphrase must be re-entered in
+// every new page session to decrypt existing notes. Session 22.
+async function getKey() {
+  const passphrase = passphraseInputEl.value;
+  if (!passphrase) throw new Error("Enter the encryption passphrase first.");
+  if (cachedKey && cachedPassphrase === passphrase) return cachedKey;
+
+  let salt = await getMeta(db, "cryptoSalt");
+  if (!salt) {
+    salt = crypto.getRandomValues(new Uint8Array(16));
+    await setMeta(db, "cryptoSalt", salt);
+  }
+  cachedKey = await deriveKeyFromPassword(passphrase, salt);
+  cachedPassphrase = passphrase;
+  return cachedKey;
+}
+
+async function toggleCompleted(id) {
+  const task = tasks.find((t) => t.id === id);
+  task.completed = !task.completed;
+  await putTask(db, task);
   renderAll();
 }
 
-function deleteTask(id) {
+async function deleteTaskHandler(id) {
+  await deleteTask(db, id);
   tasks = tasks.filter((t) => t.id !== id);
-  saveTasks(tasks);
   renderAll();
 }
 
-formEl.addEventListener("submit", (event) => {
+function revealNote(id) {
+  const task = tasks.find((t) => t.id === id);
+  return getKey().then((key) =>
+    decryptText(key, { ciphertext: task.privateNoteCipher, iv: task.privateNoteIv })
+  );
+}
+
+formEl.addEventListener("submit", async (event) => {
   event.preventDefault();
   const title = titleInputEl.value.trim();
   if (!title) return;
-  tasks.push(createTask(title, priorityInputEl.value));
-  saveTasks(tasks);
+
+  const task = createTask(title, priorityInputEl.value);
+  const note = noteInputEl.value.trim();
+  noteErrorEl.textContent = "";
+
+  if (note) {
+    try {
+      const key = await getKey();
+      const { ciphertext, iv } = await encryptText(key, note);
+      task.privateNoteCipher = ciphertext;
+      task.privateNoteIv = iv;
+    } catch (err) {
+      noteErrorEl.textContent = err.message;
+      return;
+    }
+  }
+
+  await addTask(db, task);
+  tasks.push(task);
   renderAll();
   formEl.reset();
 });
 
+// One-time import from the Session 3-8 localStorage version, so upgrading
+// to IndexedDB doesn't silently drop tasks saved before Session 22.
+async function migrateFromLocalStorage() {
+  const saved = localStorage.getItem(OLD_LOCALSTORAGE_KEY);
+  if (!saved) return [];
+  const oldTasks = JSON.parse(saved);
+  for (const oldTask of oldTasks) {
+    const task = { privateNoteCipher: null, privateNoteIv: null, ...oldTask };
+    await addTask(db, task);
+  }
+  return oldTasks;
+}
+
 async function init() {
-  tasks = await loadTasks();
+  db = await openDatabase();
+  tasks = await getAllTasks(db);
+
   if (tasks.length === 0) {
-    tasks = [createTask("Learn Block 3: PWA", "high")];
-    saveTasks(tasks);
+    tasks = await migrateFromLocalStorage();
+  }
+  if (tasks.length === 0) {
+    const seedTask = createTask("Learn Block 3: PWA", "high");
+    await addTask(db, seedTask);
+    tasks = [seedTask];
   }
   renderAll();
 }
 
 init();
+
+// Service Worker registration. Session 17 (registration and lifecycle).
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker
+    .register("/sw.js")
+    .then((reg) => console.log("SW registered:", reg.scope))
+    .catch((err) => console.error("Error registering SW:", err));
+}
