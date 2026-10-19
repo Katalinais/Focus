@@ -117,8 +117,8 @@ h1 { font-size: 1.6em; margin: 0 0 .1em; }
 .task--low { border-left-color: #6fa8dc; }
 .task--medium { border-left-color: var(--gold-deep); }
 .task--high { border-left-color: var(--danger); }
-.task span:not(.task-note) { flex: 1; }
-.task--completed span:not(.task-note) { text-decoration: line-through; color: #999; }
+.task > span:first-of-type { flex: 1; }
+.task--completed > span:first-of-type { text-decoration: line-through; color: #999; }
 .btn-delete {
   background: none;
   border: 1px solid var(--line);
@@ -148,6 +148,61 @@ h1 { font-size: 1.6em; margin: 0 0 .1em; }
   padding: .4em .6em;
 }
 .task-note--error { color: var(--danger); background: #fdecea; }
+
+.btn-device {
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: .3em .6em;
+  font-size: .78em;
+  cursor: pointer;
+}
+.btn-device:hover { background: #f4f1e8; }
+.btn-device:disabled { opacity: .6; cursor: default; }
+
+.task-photo {
+  width: 2.6em;
+  height: 2.6em;
+  object-fit: cover;
+  border-radius: 6px;
+  flex: 0 0 auto;
+}
+
+.task-location {
+  flex-basis: 100%;
+  font-size: .78em;
+  color: #555;
+}
+
+.camera-dialog {
+  border: none;
+  border-radius: 14px;
+  padding: 1.2em;
+  max-width: 90vw;
+}
+.camera-dialog::backdrop { background: rgba(0,0,0,.5); }
+.camera-dialog video {
+  display: block;
+  width: 100%;
+  max-width: 480px;
+  border-radius: 8px;
+  background: #000;
+}
+.camera-dialog-actions {
+  display: flex;
+  gap: .6em;
+  margin-top: .8em;
+}
+.camera-dialog-actions button {
+  flex: 1;
+  padding: .6em;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+#btn-capture { background: var(--ink); color: var(--gold); }
+#btn-cancel-camera { background: #eee; color: var(--ink); }
 
 .task-skeleton {
   height: 2.6em;

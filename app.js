@@ -11,6 +11,15 @@ import {
   setMeta,
 } from "./db.js";
 import { deriveKeyFromPassword, encryptText, decryptText } from "./crypto.js";
+import {
+  permissionState,
+  openCamera,
+  stopCamera,
+  describeCameraError,
+  capturePhoto,
+  obtainLocation,
+  describeLocationError,
+} from "./device.js";
 
 const OLD_LOCALSTORAGE_KEY = "pwa-elective-tasks";
 
@@ -18,6 +27,7 @@ let db;
 let tasks = [];
 let cachedKey = null;
 let cachedPassphrase = null;
+let photoUrls = []; // object URLs from the last render, revoked before the next one
 
 const listEl = document.getElementById("task-list");
 const formEl = document.getElementById("task-form");
@@ -28,14 +38,24 @@ const noteInputEl = document.getElementById("input-note");
 const noteErrorEl = document.getElementById("note-error");
 const connectionBannerEl = document.getElementById("connection-banner");
 const installBtnEl = document.getElementById("btn-install");
+const deviceErrorEl = document.getElementById("device-error");
+const cameraDialogEl = document.getElementById("camera-dialog");
+const cameraVideoEl = document.getElementById("camera-video");
+const captureBtnEl = document.getElementById("btn-capture");
+const cancelCameraBtnEl = document.getElementById("btn-cancel-camera");
 
 const renderAll = () => {
+  photoUrls.forEach((url) => URL.revokeObjectURL(url));
+  photoUrls = [];
   listEl.innerHTML = "";
   tasks.forEach((task) =>
     renderTask(task, listEl, {
       onToggle: toggleCompleted,
       onDelete: deleteTaskHandler,
       onRevealNote: revealNote,
+      onOpenCamera: openCameraForTask,
+      onGetLocation: getLocationForTask,
+      onPhotoUrlCreated: (url) => photoUrls.push(url),
     })
   );
 };
@@ -113,7 +133,13 @@ async function migrateFromLocalStorage() {
   if (!saved) return [];
   const oldTasks = JSON.parse(saved);
   for (const oldTask of oldTasks) {
-    const task = { privateNoteCipher: null, privateNoteIv: null, ...oldTask };
+    const task = {
+      privateNoteCipher: null,
+      privateNoteIv: null,
+      photo: null,
+      location: null,
+      ...oldTask,
+    };
     await addTask(db, task);
   }
   return oldTasks;
@@ -172,3 +198,70 @@ installBtnEl.addEventListener("click", async () => {
 window.addEventListener("appinstalled", () => {
   installBtnEl.hidden = true;
 });
+
+// Camera and location attachments (Session 24). Permission is requested
+// INSIDE the click that wants it, never on page load — and a denied
+// permission never breaks the task, it just shows a message.
+let cameraStream = null;
+let cameraTaskId = null;
+
+async function openCameraForTask(id) {
+  deviceErrorEl.textContent = "";
+
+  // Checking the state first (no prompt shown) avoids a doomed-to-fail
+  // getUserMedia call when the user already blocked the camera.
+  if ((await permissionState("camera")) === "denied") {
+    deviceErrorEl.textContent = describeCameraError({ name: "NotAllowedError" });
+    return;
+  }
+
+  try {
+    cameraStream = await openCamera("environment");
+  } catch (err) {
+    deviceErrorEl.textContent = describeCameraError(err);
+    return;
+  }
+
+  cameraTaskId = id;
+  cameraVideoEl.srcObject = cameraStream;
+  cameraDialogEl.showModal();
+}
+
+captureBtnEl.addEventListener("click", async () => {
+  const task = tasks.find((t) => t.id === cameraTaskId);
+  const photo = await capturePhoto(cameraVideoEl);
+  task.photo = photo;
+  await putTask(db, task);
+  cameraDialogEl.close(); // triggers the "close" listener below, which stops the stream
+  renderAll();
+});
+
+cancelCameraBtnEl.addEventListener("click", () => cameraDialogEl.close());
+
+// Fires on Cancel AND on Esc — the one place that must stop the stream,
+// so closing the dialog never leaves the camera LED on.
+cameraDialogEl.addEventListener("close", () => {
+  stopCamera(cameraStream);
+  cameraStream = null;
+  cameraVideoEl.srcObject = null;
+  cameraTaskId = null;
+});
+
+async function getLocationForTask(id) {
+  deviceErrorEl.textContent = "";
+
+  if ((await permissionState("geolocation")) === "denied") {
+    deviceErrorEl.textContent = describeLocationError({ code: 1 });
+    return;
+  }
+
+  try {
+    const location = await obtainLocation();
+    const task = tasks.find((t) => t.id === id);
+    task.location = location;
+    await putTask(db, task);
+    renderAll();
+  } catch (err) {
+    deviceErrorEl.textContent = describeLocationError(err);
+  }
+}

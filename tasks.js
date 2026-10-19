@@ -5,12 +5,17 @@
 // Storage moved from localStorage to IndexedDB in Session 22 (see db.js);
 // tasks can now also carry an AES-GCM encrypted private note (see crypto.js
 // and app.js), decrypted on demand through the onRevealNote callback below.
+// Session 24 adds an optional photo (Blob, from device.js's capturePhoto)
+// and location — neither is indexed, so the IndexedDB schema itself
+// doesn't need to change (see db.js).
 
 /**
  * @typedef {"low"|"medium"|"high"} Priority
+ * @typedef {{ lat: number, lon: number, accuracy: number, timestamp: string }} TaskLocation
  * @typedef {{
  *   id: string, title: string, priority: Priority, completed: boolean, createdAt: string,
- *   privateNoteCipher: ArrayBuffer|null, privateNoteIv: Uint8Array|null
+ *   privateNoteCipher: ArrayBuffer|null, privateNoteIv: Uint8Array|null,
+ *   photo: Blob|null, location: TaskLocation|null
  * }} Task
  */
 
@@ -23,10 +28,16 @@ export const createTask = (title, priority = "medium") => ({
   createdAt: new Date().toISOString(),
   privateNoteCipher: null,
   privateNoteIv: null,
+  photo: null,
+  location: null,
 });
 
 /** Creates a task's <li> and appends it to the container. Session 6 (DOM and events). */
-export const renderTask = (task, container, { onToggle, onDelete, onRevealNote }) => {
+export const renderTask = (
+  task,
+  container,
+  { onToggle, onDelete, onRevealNote, onOpenCamera, onGetLocation, onPhotoUrlCreated }
+) => {
   const li = document.createElement("li");
   li.className = `task task--${task.priority}` + (task.completed ? " task--completed" : "");
   li.dataset.id = task.id;
@@ -41,6 +52,48 @@ export const renderTask = (task, container, { onToggle, onDelete, onRevealNote }
   text.textContent = task.title;
 
   li.append(check, text);
+
+  // The thumbnail's object URL holds memory until revoked. renderTask only
+  // creates it; app.js (via onPhotoUrlCreated) tracks and revokes URLs from
+  // the previous render — Session 24.
+  if (task.photo) {
+    const url = URL.createObjectURL(task.photo);
+    onPhotoUrlCreated?.(url);
+    const thumb = document.createElement("img");
+    thumb.src = url;
+    thumb.alt = `Photo attached to "${task.title}"`;
+    thumb.className = "task-photo";
+    li.append(thumb);
+  }
+
+  const cameraBtn = document.createElement("button");
+  cameraBtn.type = "button";
+  cameraBtn.textContent = "📷 Photo";
+  cameraBtn.className = "btn-device";
+  cameraBtn.addEventListener("click", () => onOpenCamera(task.id));
+  li.append(cameraBtn);
+
+  if (task.location) {
+    const locationText = document.createElement("span");
+    locationText.className = "task-location";
+    locationText.textContent = `📍 ${task.location.lat.toFixed(4)}, ${task.location.lon.toFixed(4)} (±${task.location.accuracy} m)`;
+    li.append(locationText);
+  } else {
+    const locationBtn = document.createElement("button");
+    locationBtn.type = "button";
+    locationBtn.textContent = "📍 Location";
+    locationBtn.className = "btn-device";
+    locationBtn.addEventListener("click", async () => {
+      locationBtn.disabled = true;
+      locationBtn.textContent = "Locating…";
+      await onGetLocation(task.id);
+      // On success the task re-renders with task.location set, replacing
+      // this button; on failure it's simply re-enabled.
+      locationBtn.disabled = false;
+      locationBtn.textContent = "📍 Location";
+    });
+    li.append(locationBtn);
+  }
 
   if (task.privateNoteCipher) {
     const noteBtn = document.createElement("button");
